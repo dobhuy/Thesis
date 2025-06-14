@@ -8,6 +8,7 @@ from transformers import (
     WhisperProcessor, WhisperForConditionalGeneration,
     AutoTokenizer, AutoModelForTokenClassification,
     AutoProcessor, AutoModelForSpeechSeq2Seq,
+    pipeline,
 )
 
 # --- Configuration: model paths ---
