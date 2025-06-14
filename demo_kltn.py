@@ -4,11 +4,10 @@ import librosa
 import torch
 import pandas as pd
 from transformers import (
-    AutoConfig,
     Wav2Vec2Processor, Wav2Vec2ForCTC,
     WhisperProcessor, WhisperForConditionalGeneration,
     AutoTokenizer, AutoModelForTokenClassification,
-    AutoProcessor, AutoModelForSpeechSeq2Seq
+    AutoProcessor, AutoModelForSpeechSeq2Seq,
 )
 
 # --- Configuration: model paths ---
