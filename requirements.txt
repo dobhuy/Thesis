@@ -1,0 +1,6 @@
+tempfile
+streamlit
+librosa
+torch
+pandas
+transformers
