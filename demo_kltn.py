@@ -116,14 +116,14 @@ if st.button("Transcript and Detect Toxic Spans Now"):
     for name, proc in asr_processors.items():
         mod = asr_models[name]
         waveform, _ = librosa.load(audio_path, sr=16000)
-        if isinstance(proc, Wav2Vec2Processor):
-            input_values = processor(waveform, sampling_rate=16000, return_tensors="pt").input_values
+        if name == "Wav2Vec2_vlsp" or name == "Wav2Vec2_950h":
+            input_values = proc(waveform, sampling_rate=16000, return_tensors="pt").input_values
             # Dự đoán logits
             with torch.no_grad():
-                logits = model(input_values).logits
+                logits = mod(input_values).logits
             predicted_ids = torch.argmax(logits, dim=-1)
             # Decode thành văn bản
-            text = processor.decode(predicted_ids[0], skip_special_tokens=True)
+            text = proc.decode(predicted_ids[0], skip_special_tokens=True)
         elif name == "PhoWhisper":
             input_features = proc(waveform, return_tensors="pt", sampling_rate=16000).input_features
             predicted_ids = mod.generate(input_features)
@@ -136,7 +136,7 @@ if st.button("Transcript and Detect Toxic Spans Now"):
                     feature_extractor=proc.feature_extractor,
                     chunk_length_s=30,
                 )
-            result = pipe(audio_path, return_timestamps=True)
+            result = pipe(waveform, return_timestamps=True)
             text = result["text"]
         rows.append({"Model": name, "Transcript": text})
     st.table(pd.DataFrame(rows))
