@@ -31,16 +31,15 @@ TSD_MODELS = {
 asr_processors = {}
 asr_models = {}
 for name, path in ASR_MODELS.items():
-    config = AutoConfig.from_pretrained(path)
-    if config.model_type in ["wav2vec2_vlsp", "wav2vec2_950h"]:
+    if name == "Wav2Vec2_vlsp" or name == "Wav2Vec2_950h":
         proc = Wav2Vec2Processor.from_pretrained(path)
         mod = Wav2Vec2ForCTC.from_pretrained(path, ignore_mismatched_sizes=True)
         # st.write(f"Loaded Wav2Vec2 ASR for {name}")
-    elif config.model_type == "phowhisper":
+    elif name == "PhoWhisper":
         proc = AutoProcessor.from_pretrained(path)
         mod = AutoModelForSpeechSeq2Seq.from_pretrained(path)
         # st.write(f"Loaded Whisper ASR for {name}")
-    elif config.model_type == "whisper":
+    elif name == "Whisper":
         proc = WhisperProcessor.from_pretrained(path)
         mod = WhisperForConditionalGeneration.from_pretrained(path)
         mod.generation_config.forced_decoder_ids = None
