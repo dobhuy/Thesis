@@ -3,4 +3,4 @@ streamlit
 librosa
 torch
 pandas
-transformers
+transformers[torch]
