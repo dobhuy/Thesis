@@ -1,6 +1,3 @@
-from google.colab import drive
-drive.mount('/content/drive')
-
 import os
 import tempfile
 import streamlit as st
@@ -11,22 +8,24 @@ from transformers import (
     AutoConfig,
     Wav2Vec2Processor, Wav2Vec2ForCTC,
     WhisperProcessor, WhisperForConditionalGeneration,
-    AutoTokenizer, AutoModelForTokenClassification
+    AutoTokenizer, AutoModelForTokenClassification,
+    AutoProcessor, AutoModelForSpeechSeq2Seq
 )
 
 # --- Configuration: model paths ---
 ASR_MODELS = {
-    "PhoWhisper": "/content/drive/MyDrive/KLTN/ASR_models/phowhisper_base",
-    # "OpenAI Whisper": "/content/whisper_base",
-    "Wav2Vec2": "/content/drive/MyDrive/KLTN/ASR_models/wa2vec2_vlsp_37WER",
+    "PhoWhisper": "Huydb/phowhisper-toxic",
+    "Whisper": "Huydb/whisper-toxic",
+    "Wav2Vec2_vlsp": "Huydb/wav2vec-vlsp-toxic",
+    "Wav2Vec2_950h": "Huydb/wav2vec-950h-toxic",
 }
 TSD_MODELS = {
-    "PhoBERT": "/content/drive/MyDrive/KLTN/TSD_models/phobert_base_v2",
-    "ViSoBERT": "/content/drive/MyDrive/KLTN/TSD_models/ViSoBERT",
-    "CafeBERT": "/content/drive/MyDrive/KLTN/TSD_models/cafebert",
-    "XLMR": "/content/drive/MyDrive/KLTN/TSD_models/xlmr",
-    "BERT": "/content/drive/MyDrive/KLTN/TSD_models/BERT",
-    "DistilBERT": "/content/drive/MyDrive/KLTN/TSD_models/DistilBERT",
+    "PhoBERT": "Huydb/PhoBERT-toxic",
+    "ViSoBERT": "Huydb/ViSoBERT-toxic",
+    "CafeBERT": "Huydb/CafeBERT-toxic",
+    "XLMR": "Huydb/XLMR-toxic",
+    "BERT": "Huydb/BERT-toxic",
+    "DistilBERT": "Huydb/DistilBERT-toxic",
 }
 
 # --- Load ASR processors & models using config ---
@@ -34,14 +33,22 @@ asr_processors = {}
 asr_models = {}
 for name, path in ASR_MODELS.items():
     config = AutoConfig.from_pretrained(path)
-    if config.model_type == "wav2vec2":
+    if config.model_type in ["wav2vec2_vlsp", "wav2vec2_950h"]:
         proc = Wav2Vec2Processor.from_pretrained(path)
         mod = Wav2Vec2ForCTC.from_pretrained(path, ignore_mismatched_sizes=True)
         # st.write(f"Loaded Wav2Vec2 ASR for {name}")
-    elif config.model_type in ["whisper", "phowhisper"]:
+    elif config.model_type == "phowhisper":
+        proc = AutoProcessor.from_pretrained(path)
+        mod = AutoModelForSpeechSeq2Seq.from_pretrained(path)
+        # st.write(f"Loaded Whisper ASR for {name}")
+    elif config.model_type == "whisper":
         proc = WhisperProcessor.from_pretrained(path)
         mod = WhisperForConditionalGeneration.from_pretrained(path)
-        # st.write(f"Loaded Whisper ASR for {name}")
+        mod.generation_config.forced_decoder_ids = None
+        mod.generation_config.suppress_tokens = None
+        
+        mod.generation_config.language = "vi"
+        mod.generation_config.task = "transcribe"
     else:
         st.error(f"Không hỗ trợ loại ASR model {config.model_type} tại {name}")
         continue
@@ -112,19 +119,27 @@ if st.button("Transcript and Detect Toxic Spans Now"):
         mod = asr_models[name]
         waveform, _ = librosa.load(audio_path, sr=16000)
         if isinstance(proc, Wav2Vec2Processor):
-            inputs = proc(waveform, sampling_rate=16000, return_tensors="pt")
-            with torch.no_grad(): logits = mod(inputs.input_values).logits
-            pred_ids = torch.argmax(logits, dim=-1)
-            text = proc.decode(pred_ids[0], skip_special_tokens=True)
-        else:
-            inputs = proc(waveform, return_tensors="pt", sampling_rate=16000)
+            input_values = processor(waveform, sampling_rate=16000, return_tensors="pt").input_values
+            # Dự đoán logits
             with torch.no_grad():
-                outs = mod.generate(
-                    inputs.input_features,
-                    forced_decoder_ids=proc.get_decoder_prompt_ids(language="vi", task="transcribe"),
-                    return_dict_in_generate=True
+                logits = model(input_values).logits
+            predicted_ids = torch.argmax(logits, dim=-1)
+            # Decode thành văn bản
+            text = processor.decode(predicted_ids[0], skip_special_tokens=True)
+        elif name == "PhoWhisper":
+            input_features = proc(waveform, return_tensors="pt", sampling_rate=16000).input_features
+            predicted_ids = mod.generate(input_features)
+            text = proc.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+        elif name == "Whisper":
+            pipe = pipeline(
+                    "automatic-speech-recognition",
+                    model=mod,
+                    tokenizer=proc.tokenizer,
+                    feature_extractor=proc.feature_extractor,
+                    chunk_length_s=30,
                 )
-            text = proc.batch_decode(outs.sequences, skip_special_tokens=True)[0]
+            result = pipe(audio_path, return_timestamps=True)
+            text = result["text"]
         rows.append({"Model": name, "Transcript": text})
     st.table(pd.DataFrame(rows))
 
@@ -157,4 +172,3 @@ if st.button("Transcript and Detect Toxic Spans Now"):
         )
     html.append("</table>")
     st.markdown('\n'.join(html), unsafe_allow_html=True)
-
