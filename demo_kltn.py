@@ -1,3 +1,7 @@
+import asyncio
+import nest_asyncio
+nest_asyncio.apply()
+
 import tempfile
 import streamlit as st
 import librosa
@@ -37,7 +41,7 @@ for name, path in ASR_MODELS.items():
         # st.write(f"Loaded Wav2Vec2 ASR for {name}")
     elif name == "PhoWhisper":
         proc = AutoProcessor.from_pretrained(path)
-        mod = AutoModelForSpeechSeq2Seq.from_pretrained(path)
+        mod = AutoModelForSpeechSeq2Seq.from_pretrained(path,device_map="cpu",offload_folder=None)
         # st.write(f"Loaded Whisper ASR for {name}")
     elif name == "Whisper":
         proc = WhisperProcessor.from_pretrained(path)
@@ -125,7 +129,7 @@ if st.button("Transcript and Detect Toxic Spans Now"):
             # Decode thành văn bản
             text = proc.decode(predicted_ids[0], skip_special_tokens=True)
         elif name == "PhoWhisper":
-            input_features = proc(waveform, return_tensors="pt", sampling_rate=16000).input_features
+            input_features = proc(waveform, return_tensors="pt", sampling_rate=16000).input_features.to("cpu")
             predicted_ids = mod.generate(input_features)
             text = proc.batch_decode(predicted_ids, skip_special_tokens=True)[0]
         elif name == "Whisper":
