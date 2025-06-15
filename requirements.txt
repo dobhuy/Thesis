@@ -1,3 +1,4 @@
+accelerate
 nest_asyncio
 streamlit
 librosa
