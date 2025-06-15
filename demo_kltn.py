@@ -165,13 +165,13 @@ if st.button("Transcript and Detect Toxic Spans Now"):
         return html.strip()
     for name, tok in tsd_tokenizers.items():
         mod = tsd_models[name]
-        enc = tok(list([transcript_text]), is_split_into_words=True,
+        enc = tok(list([rows[1]['Transcript']]), is_split_into_words=True,
                   padding='max_length', truncation=True,
-                  max_length=len(list(transcript_text)), return_tensors="pt")
+                  max_length=len(list(rows[1]['Transcript'])), return_tensors="pt")
         with torch.no_grad(): 
             logits = mod(input_ids=enc.input_ids, attention_mask=enc.attention_mask).logits
         labels = logits.argmax(-1)[0].cpu().tolist()
-        highlighted_html = highlight_toxic_span(transcript_text.split(), labels)
+        highlighted_html = highlight_toxic_span(rows[1]['Transcript'].split(), labels)
         html.append(
             f"<tr><td style='border:1px solid #ddd; padding:8px;'>{name}</td>"
             f"<td style='border:1px solid #ddd; padding:8px;'>{highlighted_html}</td></tr>"
