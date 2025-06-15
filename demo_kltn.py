@@ -41,7 +41,8 @@ for name, path in ASR_MODELS.items():
         # st.write(f"Loaded Wav2Vec2 ASR for {name}")
     elif name == "PhoWhisper":
         proc = AutoProcessor.from_pretrained(path)
-        mod = AutoModelForSpeechSeq2Seq.from_pretrained(path,device_map="cpu",offload_folder=None)
+        mod = AutoModelForSpeechSeq2Seq.from_pretrained(path,torch_dtype=torch.float32,)
+        mod.to("cpu")
         # st.write(f"Loaded Whisper ASR for {name}")
     elif name == "Whisper":
         proc = WhisperProcessor.from_pretrained(path)
