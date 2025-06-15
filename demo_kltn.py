@@ -149,13 +149,12 @@ if st.button("Transcript and Detect Toxic Spans Now"):
         "<th style='border:1px solid #ddd; padding:8px;'>Result</th></tr>"
     ]
     def highlight_toxic_span(words, labels):
-        out = ""
         for word, label in zip(words, labels):
             if label == 1:
-                out += f"\033[91m{word}\033[0m"
+                print(f"\033[91m{word}\033[0m", end=" ")  # đỏ
             else:
-                out += word
-        return out
+                print(word, end=" ")
+        print()
     for name, tok in tsd_tokenizers.items():
         mod = tsd_models[name]
         enc = tok(list([transcript_text]), is_split_into_words=True,
@@ -164,10 +163,10 @@ if st.button("Transcript and Detect Toxic Spans Now"):
         with torch.no_grad(): 
             logits = mod(input_ids=enc.input_ids, attention_mask=enc.attention_mask).logits
         labels = logits.argmax(-1)[0].cpu().tolist()
-        highlighted = highlight_toxic_span(transcript_text.split(), labels)
+        # highlighted = highlight_toxic_span(transcript_text.split(), labels)
         html.append(
             f"<tr><td style='border:1px solid #ddd; padding:8px;'>{name}</td>"
-            f"<td style='border:1px solid #ddd; padding:8px;'>{highlighted}</td></tr>"
+            f"<td style='border:1px solid #ddd; padding:8px;'>{highlight_toxic_span(transcript_text.split(), labels)}</td></tr>"
         )
     html.append("</table>")
     st.markdown('\n'.join(html), unsafe_allow_html=True)
